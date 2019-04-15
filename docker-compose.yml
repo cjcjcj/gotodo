@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+  app:
+    hostname: app
+    container_name: todo
+    image: todo
+    build: .
+    ports:
+      - 8080:8080
+    environment:
+      - TODO_REDIS_ADDR=redis:6379
+    depends_on:
+      - redis
+    links:
+      - redis
+    volumes:
+      - ./logs/:/var/log/todo
+
+  redis:
+    hostname: redis
+    image: redis:5-alpine
+    ports:
+      - 6379:6379
+
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: prometheus
+  #   ports:
+  #   - 9090:9090
+  #   command:
+  #   - --config.file=/etc/prometheus/prometheus.yml
+  #   volumes:
+  #   - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #   depends_on:
+  #   - app
