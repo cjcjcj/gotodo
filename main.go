@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	delivery "github.com/cjcjcj/todo/todo/delivery/http"
+	delivery "github.com/cjcjcj/todo/todo/gateways/http"
 	repository "github.com/cjcjcj/todo/todo/repository/redis"
 	"github.com/cjcjcj/todo/todo/service"
 	"github.com/labstack/echo"
@@ -67,7 +67,7 @@ func action(ctx *cli.Context) (err error) {
 
 	todoRepo := repository.NewRedisTodoRepository(redisClient, logger)
 	todoService := service.NewTodoService(todoRepo)
-	delivery.InitializeTodoHTTPHandler(e, todoService, logger)
+	delivery.InitializeTodoHandler(e, todoService, logger)
 
 	return
 }
