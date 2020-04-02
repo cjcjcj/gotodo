@@ -3,6 +3,7 @@ module github.com/cjcjcj/todo
 go 1.14
 
 require (
+	github.com/go-redis/redis/v7 v7.2.0
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/labstack/gommon v0.2.8 // indirect
@@ -15,6 +16,5 @@ require (
 	github.com/urfave/cli v1.20.0
 	github.com/valyala/fasttemplate v1.0.1 // indirect
 	go.uber.org/zap v1.14.1
-	golang.org/x/sys v0.0.0-20190422165155-953cdadca894 // indirect
 	golang.org/x/text v0.3.2 // indirect
 )

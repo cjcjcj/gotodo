@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/cjcjcj/todo/todo/repository/entities"
+	repoErrors "github.com/cjcjcj/todo/todo/repository/errors"
 
 	"github.com/cjcjcj/todo/todo/domains"
 	"github.com/cjcjcj/todo/todo/repository"
@@ -19,15 +19,14 @@ type todoService struct {
 }
 
 // NewTodoService is a constructor for todo service
-func NewTodoService(todoRepo repository.TodoRepository) TodoService {
+func NewTodoService(todoRepo repository.TodoRepository) *todoService {
 	return &todoService{TodoRepo: todoRepo}
 }
 
 func (s *todoService) Create(ctx context.Context, item *domains.Todo) error {
-	itemE := entities.NewTodo(item.ID, item.Title, item.Closed)
-	err := s.TodoRepo.Create(ctx, itemE)
+	repoItem := item.ToRepoTodo()
 
-	if err != nil {
+	if _, err := s.TodoRepo.Create(ctx, repoItem); err != nil {
 		return ErrInternal
 	}
 	return nil
@@ -35,8 +34,16 @@ func (s *todoService) Create(ctx context.Context, item *domains.Todo) error {
 
 func (s *todoService) Close(ctx context.Context, item *domains.Todo) error {
 	item.Closed = true
-	itemE := entities.NewTodo(item.ID, item.Title, item.Closed)
-	err := s.TodoRepo.Update(ctx, itemE)
+
+	repoItem := item.ToRepoTodo()
+	if _, err := s.TodoRepo.Update(ctx, repoItem); err != nil {
+		return ErrInternal
+	}
+	return nil
+}
+
+func (s *todoService) Delete(ctx context.Context, ID string) error {
+	err := s.TodoRepo.Delete(ctx, ID)
 
 	if err != nil {
 		return ErrInternal
@@ -44,42 +51,17 @@ func (s *todoService) Close(ctx context.Context, item *domains.Todo) error {
 	return nil
 }
 
-func (s *todoService) Delete(ctx context.Context, id uint) error {
-	err := s.TodoRepo.Delete(ctx, id)
+func (s *todoService) GetByID(ctx context.Context, ID string) (*domains.Todo, error) {
+	repoTodo, err := s.TodoRepo.GetByID(ctx, ID)
 
-	if err != nil {
-		return ErrInternal
-	}
-	return nil
-}
-
-func (s *todoService) GetByID(ctx context.Context, id uint) (*domains.Todo, error) {
-	ve, err := s.TodoRepo.GetByID(ctx, id)
-	v := domains.NewTodo(ve.ID, ve.Title, ve.Closed)
-
-	if err != nil {
-		return nil, ErrInternal
-	}
-	if v == nil {
+	switch err.(type) {
+	case nil:
+		domainTodo := domains.NewTodoFromRepoTodo(repoTodo)
+		return domainTodo, nil
+	case *repoErrors.NotFoundError:
 		return nil, ErrTodoNotFound
-	}
-
-	return v, nil
-}
-
-func (s *todoService) GetAll(ctx context.Context) ([]*domains.Todo, error) {
-	ves, err := s.TodoRepo.GetAll(ctx)
-	vs := make([]*domains.Todo, 0)
-	for _, ve := range ves {
-		vs = append(vs, domains.NewTodo(ve.ID, ve.Title, ve.Closed))
-	}
-
-	if err != nil {
+	default:
+		// any other errors
 		return nil, ErrInternal
 	}
-	if len(vs) == 0 {
-		return vs, ErrTodoNotFound
-	}
-
-	return vs, nil
 }

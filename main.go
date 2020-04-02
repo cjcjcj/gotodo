@@ -5,13 +5,14 @@ import (
 	delivery "github.com/cjcjcj/todo/todo/delivery/http"
 	repository "github.com/cjcjcj/todo/todo/repository/redis"
 	"github.com/cjcjcj/todo/todo/service"
-	"github.com/gomodule/redigo/redis"
 	"github.com/labstack/echo"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 	"os"
 	"sort"
+
+	goredis "github.com/go-redis/redis/v7"
 )
 
 var (
@@ -43,6 +44,11 @@ func action(ctx *cli.Context) (err error) {
 	}
 
 	redisAddr := fmt.Sprintf("%v:%v", cfg.Redis.Host, cfg.Redis.Port)
+	redisClient := goredis.NewClient(&goredis.Options{
+		Addr:     redisAddr,
+		Password: "",           // no password set
+		DB:       cfg.Redis.DB, // use default DB
+	})
 	echoAddr := ":8080"
 
 	logger := zap.NewExample()
@@ -57,23 +63,9 @@ func action(ctx *cli.Context) (err error) {
 		zap.Any("address", echoAddr),
 	)
 
-	redisConn, err := redis.Dial(
-		"tcp",
-		redisAddr,
-		redis.DialDatabase(cfg.Redis.DB),
-	)
-	if err != nil {
-		logger.Error(
-			"redis initialization failed",
-			zap.Error(err),
-		)
-		return cli.NewMultiError(err)
-	}
-	defer redisConn.Close()
-
 	e := initEcho()
 
-	todoRepo := repository.NewRedisTodoRepository(redisConn, logger)
+	todoRepo := repository.NewRedisTodoRepository(redisClient, logger)
 	todoService := service.NewTodoService(todoRepo)
 	delivery.InitializeTodoHTTPHandler(e, todoService, logger)
 

@@ -2,15 +2,15 @@ package entities
 
 // Todo represents todo in redis data model
 type Todo struct {
-	ID     uint   `json:"id"`
-	Title  string `json:"title"`
-	Closed bool   `json:"closed"`
+	ID     string
+	Title  string
+	Closed bool
 }
 
-func NewTodo(id uint, title string, closed bool) *Todo{
+func NewTodoFromTodo(t *Todo) *Todo {
 	return &Todo{
-		ID:     id,
-		Title:  title,
-		Closed: closed,
+		ID:     t.ID,
+		Title:  t.Title,
+		Closed: t.Closed,
 	}
 }

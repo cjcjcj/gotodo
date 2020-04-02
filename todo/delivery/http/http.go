@@ -1,11 +1,9 @@
 package http
 
 import (
+	"github.com/labstack/echo"
 	"go.uber.org/zap"
 	"net/http"
-	"strconv"
-
-	"github.com/labstack/echo"
 
 	"github.com/cjcjcj/todo/todo/domains"
 	"github.com/cjcjcj/todo/todo/service"
@@ -13,7 +11,7 @@ import (
 
 // Todo represents todo entity which comes w/ http requests
 type Todo struct {
-	ID     uint   `json:"id" query:"id"`
+	ID     string `json:"id" query:"id"`
 	Title  string `json:"title" validate:"required"`
 	Closed bool   `json:"closed"`
 }
@@ -51,44 +49,10 @@ func InitializeTodoHTTPHandler(
 ) {
 	handler := newTodoHandler(s, logger)
 
-	e.GET("/todo", handler.GetAll)
 	e.POST("/todo", handler.Create)
 	e.GET("/todo/:id", handler.GetByID)
 	e.DELETE("/todo/:id", handler.Delete)
 	e.PUT("/todo/:id", handler.Close)
-}
-
-// GetAll is a handler for receiving all todo list items
-func (h *todoHandler) GetAll(c echo.Context) error {
-	ctx := c.Request().Context()
-
-	domainTodos, err := h.TodoService.GetAll(ctx)
-	switch err {
-	case service.ErrInternal:
-		h.logger.Error(
-			"GetAll error",
-			zap.Error(err),
-		)
-
-		responseTodoStatusInternalServerErrorCounter.Inc()
-		return c.JSON(http.StatusInternalServerError, err.Error())
-	case service.ErrTodoNotFound:
-		h.logger.Debug(
-			"GetAll not found",
-			zap.Error(err),
-		)
-
-		responseTodoStatusNotFoundCounter.Inc()
-		return c.JSON(http.StatusNotFound, err.Error())
-	}
-
-	var result []*Todo
-	for _, domainTodo := range domainTodos {
-		result = append(result, TodoFromDomainTodo(domainTodo))
-	}
-
-	responseTodoStatusOKCounter.Inc()
-	return c.JSON(http.StatusOK, result)
 }
 
 // Create is a handler for todo list item creation
@@ -141,17 +105,9 @@ func (h *todoHandler) Create(c echo.Context) error {
 func (h *todoHandler) GetByID(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		h.logger.Error(
-			"GetById error",
-			zap.Error(err),
-		)
+	id := c.Param("id")
 
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-
-	todoDomain, err := h.TodoService.GetByID(ctx, uint(id))
+	todoDomain, err := h.TodoService.GetByID(ctx, id)
 	switch err {
 	case service.ErrInternal:
 		h.logger.Error(
@@ -179,17 +135,9 @@ func (h *todoHandler) GetByID(c echo.Context) error {
 func (h *todoHandler) Delete(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		h.logger.Error(
-			"Delete error",
-			zap.Error(err),
-		)
+	id := c.Param("id")
 
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-
-	switch err = h.TodoService.Delete(ctx, uint(id)); err {
+	switch err := h.TodoService.Delete(ctx, id); err {
 	case service.ErrInternal:
 		h.logger.Error(
 			"Delete error",
@@ -214,17 +162,9 @@ func (h *todoHandler) Delete(c echo.Context) error {
 func (h *todoHandler) Close(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		h.logger.Error(
-			"Close error",
-			zap.Error(err),
-		)
+	id := c.Param("id")
 
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-
-	todoDomain, err := h.TodoService.GetByID(ctx, uint(id))
+	todoDomain, err := h.TodoService.GetByID(ctx, id)
 	switch err {
 	case service.ErrInternal:
 		h.logger.Error(

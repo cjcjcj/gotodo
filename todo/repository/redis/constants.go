@@ -1,6 +1,9 @@
 package redis
 
 const (
-	redisTODOsField = "hm"
-	redisIDfield    = "id"
+	rootKey   = "todo"
+	separator = ":"
+
+	redisTODOField      = rootKey + separator + "todo"
+	redisIDCounterField = rootKey + separator + "ID"
 )

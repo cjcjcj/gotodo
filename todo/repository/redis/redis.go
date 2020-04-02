@@ -2,108 +2,119 @@ package redis
 
 import (
 	"context"
-	"encoding/json"
-	"github.com/cjcjcj/todo/todo/repository"
 	"github.com/cjcjcj/todo/todo/repository/entities"
+	"github.com/cjcjcj/todo/todo/repository/errors"
 	"go.uber.org/zap"
+	"strconv"
 
-	"github.com/gomodule/redigo/redis"
+	goredis "github.com/go-redis/redis/v7"
 )
 
-// NewRedisTodoRepository returns new redis todo repository instance
-func NewRedisTodoRepository(
-	conn redis.Conn,
-	logger *zap.Logger,
-) repository.TodoRepository {
-	return &todoRepository{
-		logger: logger,
+func (r *TodoRepository) getNewID(ctx context.Context) (string, error) {
+	var (
+		key = r.getKey(redisIDCounterField)
+	)
 
-		Conn: conn,
+	cmd := r.client.Incr(key)
+	id, err := cmd.Result()
+	if err != nil {
+		r.logger.Error(
+			"ID increment failed",
+			zap.Error(err),
+		)
+		return "", err
 	}
+
+	return strconv.Itoa(int(id)), nil
 }
 
-func (r *todoRepository) Create(ctx context.Context, te *entities.Todo) error {
+func (r *TodoRepository) Create(
+	ctx context.Context,
+	todo *entities.Todo,
+) (*entities.Todo, error) {
 	r.logger.Debug(
 		"creating new TODO item",
-		zap.Any("item", te),
+		zap.Any("item", todo),
 	)
 
-	newID, err := redis.Int(r.Conn.Do("INCR", redisIDfield))
+	ID, err := r.getNewID(ctx)
 	if err != nil {
 		r.logger.Error(
 			"TODO create item operation error",
-			zap.Any("item", te),
+			zap.Any("item", todo),
 			zap.Error(err),
 		)
 
-		return err
+		return nil, err
 	}
-	te.ID = uint(newID)
 
-	trB, err := json.Marshal(te)
-	if err != nil {
+	var (
+		key = r.getKey(redisTODOField, ID)
+	)
+
+	toinsert := entities.NewTodoFromTodo(todo)
+	toinsert.ID = ID
+
+	cmd := r.client.Set(key, toinsert, 0)
+	if _, err := cmd.Result(); err != nil {
 		r.logger.Error(
 			"TODO create item operation error",
-			zap.Any("item", te),
+			zap.Any("source_item", todo),
+			zap.Any("to_insert_item", toinsert),
 			zap.Error(err),
 		)
 
-		return err
+		return nil, err
 	}
 
-	if _, err = r.Conn.Do("HSET", redisTODOsField, te.ID, string(trB)); err != nil {
-		r.logger.Error(
-			"TODO create item operation error",
-			zap.Any("item", te),
-			zap.Error(err),
-		)
-
-		return err
-	}
-
-	return nil
+	return toinsert, nil
 }
 
-func (r *todoRepository) Update(ctx context.Context, te *entities.Todo) error {
+func (r *TodoRepository) Update(
+	ctx context.Context,
+	todo *entities.Todo,
+) (*entities.Todo, error) {
 	r.logger.Debug(
 		"updating TODO item",
-		zap.Uint("id", te.ID),
+		zap.String("id", todo.ID),
 	)
 
-	trB, err := json.Marshal(te)
-	if err != nil {
+	var (
+		key = r.getKey(redisTODOField, todo.ID)
+
+		toupdate = entities.NewTodoFromTodo(todo)
+	)
+
+	cmd := r.client.Set(key, toupdate, 0)
+	if _, err := cmd.Result(); err != nil {
 		r.logger.Error(
 			"TODO item update operation error",
-			zap.Uint("id", te.ID),
+			zap.Any("source_item", todo),
+			zap.Any("to_update_item", toupdate),
 			zap.Error(err),
 		)
 
-		return err
+		return nil, err
 	}
 
-	if _, err = r.Conn.Do("HSET", redisTODOsField, te.ID, string(trB)); err != nil {
-		r.logger.Error(
-			"TODO item update operation error",
-			zap.Uint("id", te.ID),
-			zap.Error(err),
-		)
-
-		return err
-	}
-
-	return nil
+	return toupdate, nil
 }
 
-func (r *todoRepository) Delete(ctx context.Context, id uint) error {
+func (r *TodoRepository) Delete(ctx context.Context, ID string) error {
 	r.logger.Debug(
 		"deleting TODO item",
-		zap.Uint("id", id),
+		zap.String("id", ID),
 	)
 
-	if _, err := r.Conn.Do("HDEL", redisTODOsField, id); err != nil {
+	var (
+		key = r.getKey(redisTODOField, ID)
+	)
+
+	cmd := r.client.Del(key)
+	if _, err := cmd.Result(); err != nil {
 		r.logger.Error(
 			"TODO item delete operation error",
-			zap.Uint("id", id),
+			zap.String("id", ID),
 			zap.Error(err),
 		)
 
@@ -113,75 +124,43 @@ func (r *todoRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-func (r *todoRepository) GetByID(ctx context.Context, id uint) (*entities.Todo, error) {
+func (r *TodoRepository) GetByID(
+	ctx context.Context,
+	ID string,
+) (*entities.Todo, error) {
 	r.logger.Debug(
 		"receiving TODO item",
-		zap.Uint("id", id),
+		zap.String("id", ID),
 	)
 
-	vb, err := redis.Bytes(r.Conn.Do("HGET", redisTODOsField, id))
-	switch err {
+	var (
+		key = r.getKey(redisTODOField, ID)
+
+		result = &entities.Todo{}
+	)
+
+	switch err := r.client.Get(key).Scan(result); err {
 	case nil:
 		// OK
 		r.logger.Debug(
 			"TODO item successfully received",
-			zap.Uint("id", id),
+			zap.String("id", ID),
 		)
 
 		break
-	case redis.ErrNil:
+	case goredis.Nil:
 		// if value not present
-		return nil, nil
+		return nil, &errors.NotFoundError{ID: ID}
 	default:
 		// any other error
 		r.logger.Error(
 			"getting TODO item error",
-			zap.Uint("id", id),
+			zap.String("id", ID),
 			zap.Error(err),
 		)
 
 		return nil, err
 	}
 
-	tr := &entities.Todo{}
-	err = json.Unmarshal(vb, tr)
-	if err != nil {
-		return nil, err
-	}
-
-	return tr, nil
-}
-
-func (r *todoRepository) GetAll(ctx context.Context) ([]*entities.Todo, error) {
-	r.logger.Debug(
-		"getting all TODO items",
-	)
-
-	v, err := redis.ByteSlices(r.Conn.Do("HVALS", redisTODOsField))
-	if err != nil {
-		r.logger.Error(
-			"receiving all todo items error",
-			zap.Error(err),
-		)
-
-		return nil, err
-	}
-
-	var todos []*entities.Todo
-	tr := &entities.Todo{}
-
-	for _, trB := range v {
-		err = json.Unmarshal(trB, tr)
-		if err != nil {
-			r.logger.Error(
-				"receiving all todo items error",
-				zap.Error(err),
-			)
-
-			return nil, err
-		}
-		todos = append(todos, tr)
-	}
-
-	return todos, nil
+	return result, nil
 }

@@ -1,21 +1,21 @@
 version: "3"
 
 services:
-  app:
-    hostname: app
-    container_name: todo
-    image: todo
-    build: .
-    ports:
-      - 8080:8080
-    environment:
-      - TODO_REDIS_ADDR=redis:6379
-    depends_on:
-      - redis
-    links:
-      - redis
-    volumes:
-      - ./logs/:/var/log/todo
+  # app:
+  #   hostname: app
+  #   container_name: todo
+  #   image: todo
+  #   build: .
+  #   ports:
+  #     - 8080:8080
+  #   environment:
+  #     - TODO_REDIS_ADDR=redis:6379
+  #   depends_on:
+  #     - redis
+  #   links:
+  #     - redis
+  #   volumes:
+  #     - ./logs/:/var/log/todo
 
   redis:
     hostname: redis
