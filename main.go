@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	delivery "github.com/cjcjcj/todo/todo/delivery/http"
-	"github.com/cjcjcj/todo/todo/repository"
+	repository "github.com/cjcjcj/todo/todo/repository/redis"
 	"github.com/cjcjcj/todo/todo/service"
 	"github.com/gomodule/redigo/redis"
 	"github.com/urfave/cli"

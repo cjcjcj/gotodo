@@ -1,4 +1,4 @@
-package repository
+package redis
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 
-	"github.com/cjcjcj/todo/todo/entities"
+	"github.com/cjcjcj/todo/todo/domains"
 
 	"github.com/rafaeljusto/redigomock"
 )
@@ -25,7 +25,7 @@ func TestRedisTodoCreate(t *testing.T) {
 		cmdInc := rc.Command("INCR", redisIDfield).Expect(int64(id))
 		cmdAdd := rc.Command("HSET", redisTODOsField, id, fmt.Sprintf(`{"id":%d,"title":"%s","closed":false}`, id, title)).Expect("OK")
 
-		te := entities.NewTodo(title)
+		te := domains.NewTodoFromString(title)
 
 		err := h.Create(context.TODO(), te)
 		if err != nil {
@@ -53,7 +53,7 @@ func TestRedisTodoCreate(t *testing.T) {
 	t.Run("error-incr", func(t *testing.T) {
 		rc.Command("INCR", redisIDfield).ExpectError(fmt.Errorf("HSET error"))
 
-		te := entities.NewTodo(title)
+		te := domains.NewTodoFromString(title)
 
 		err := h.Create(context.TODO(), te)
 		if err == nil {
@@ -65,7 +65,7 @@ func TestRedisTodoCreate(t *testing.T) {
 		rc.Command("INCR", redisIDfield).Expect(int64(id))
 		rc.Command("HSET", redisTODOsField, id, fmt.Sprintf(`{"id":%d,"title":"%s","closed":false}`, id, title)).ExpectError(fmt.Errorf("HSET error"))
 
-		te := entities.NewTodo(title)
+		te := domains.NewTodoFromString(title)
 
 		err := h.Create(context.TODO(), te)
 		if err == nil {
@@ -87,7 +87,7 @@ func TestRedisTodoUpdate(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		cmd := rc.Command("HSET", redisTODOsField, id, fmt.Sprintf(`{"id":%d,"title":"%s","closed":%v}`, id, title, closed)).Expect("OK")
 
-		te := &entities.Todo{ID: id, Title: title, Closed: closed}
+		te := &domains.Todo{ID: id, Title: title, Closed: closed}
 
 		if err := h.Update(context.TODO(), te); err != nil {
 			t.Fatal(err)
@@ -111,7 +111,7 @@ func TestRedisTodoUpdate(t *testing.T) {
 	t.Run("error", func(t *testing.T) {
 		rc.Command("HSET", redisTODOsField, id, fmt.Sprintf(`{"id":%d,"title":"%s","closed":%v}`, id, title, closed)).ExpectError(fmt.Errorf("expected error"))
 
-		te := &entities.Todo{ID: id, Title: title, Closed: closed}
+		te := &domains.Todo{ID: id, Title: title, Closed: closed}
 
 		if err := h.Update(context.TODO(), te); err == nil {
 			t.Fatal(err)

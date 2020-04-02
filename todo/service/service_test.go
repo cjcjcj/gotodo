@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/cjcjcj/todo/mocks"
-	"github.com/cjcjcj/todo/todo/entities"
+	"github.com/cjcjcj/todo/todo/domains"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -19,8 +19,8 @@ func TestTodoCreate(t *testing.T) {
 
 	mockRepo := &mocks.TodoRepository{}
 
-	te := entities.NewTodo(title)
-	expectedTe := entities.Todo{
+	te := domains.NewTodoFromString(title)
+	expectedTe := domains.Todo{
 		ID:     id,
 		Title:  title,
 		Closed: closed,
@@ -47,12 +47,12 @@ func TestTodoClose(t *testing.T) {
 	)
 
 	mockRepo := &mocks.TodoRepository{}
-	te := &entities.Todo{
+	te := &domains.Todo{
 		ID:     id,
 		Title:  title,
 		Closed: false,
 	}
-	expectedTe := entities.Todo{
+	expectedTe := domains.Todo{
 		ID:     id,
 		Title:  title,
 		Closed: true,
@@ -97,7 +97,7 @@ func TestTodoGetById(t *testing.T) {
 
 	mockRepo := &mocks.TodoRepository{}
 
-	expectedTe := entities.Todo{
+	expectedTe := domains.Todo{
 		ID:     id,
 		Title:  title,
 		Closed: closed,

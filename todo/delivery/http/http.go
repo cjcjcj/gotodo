@@ -7,7 +7,7 @@ import (
 
 	"github.com/labstack/echo"
 
-	"github.com/cjcjcj/todo/todo/entities"
+	"github.com/cjcjcj/todo/todo/domains"
 	"github.com/cjcjcj/todo/todo/service"
 )
 
@@ -19,7 +19,7 @@ type Todo struct {
 }
 
 // TodoFromDomainTodo is a copy constructor for Todo
-func TodoFromDomainTodo(td *entities.Todo) *Todo {
+func TodoFromDomainTodo(td *domains.Todo) *Todo {
 	return &Todo{
 		ID:     td.ID,
 		Title:  td.Title,
@@ -113,7 +113,7 @@ func (h *todoHandler) Create(c echo.Context) error {
 		return err
 	}
 
-	todoItem := entities.NewTodo(todoRequestItems.Title)
+	todoItem := domains.NewTodoFromString(todoRequestItems.Title)
 
 	switch err := h.TodoService.Create(ctx, todoItem); err {
 	case service.ErrInternal:

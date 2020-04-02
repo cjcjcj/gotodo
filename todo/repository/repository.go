@@ -2,8 +2,7 @@ package repository
 
 import (
 	"context"
-
-	"github.com/cjcjcj/todo/todo/entities"
+	"github.com/cjcjcj/todo/todo/repository/entities"
 )
 
 // TodoRepository represent the Todo's repository contract
