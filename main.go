@@ -6,6 +6,8 @@ import (
 	repository "github.com/cjcjcj/todo/todo/repository/redis"
 	"github.com/cjcjcj/todo/todo/service"
 	"github.com/gomodule/redigo/redis"
+	"github.com/labstack/echo"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 	"os"
@@ -30,12 +32,15 @@ func main() {
 	app.Flags = cliFlags
 	sort.Sort(cli.FlagsByName(app.Flags))
 
-	app.Run(os.Args)
+	_ = app.Run(os.Args)
 }
 
 func action(ctx *cli.Context) (err error) {
 	// parse cfg
 	cfg, err := newConfigurationFromContext(ctx)
+	if err != nil {
+		return cli.NewMultiError(err)
+	}
 
 	redisAddr := fmt.Sprintf("%v:%v", cfg.Redis.Host, cfg.Redis.Port)
 	echoAddr := ":8080"
@@ -73,4 +78,12 @@ func action(ctx *cli.Context) (err error) {
 	delivery.InitializeTodoHTTPHandler(e, todoService, logger)
 
 	return
+}
+
+func initEcho() *echo.Echo {
+	e := echo.New()
+
+	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
+
+	return e
 }
