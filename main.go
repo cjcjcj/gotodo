@@ -1,19 +1,22 @@
 package main
 
 import (
-	"io"
-	"os"
-
-	"github.com/go-playground/validator"
-	"github.com/gomodule/redigo/redis"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
-
+	"fmt"
 	delivery "github.com/cjcjcj/todo/todo/delivery/http"
 	"github.com/cjcjcj/todo/todo/repository"
 	"github.com/cjcjcj/todo/todo/service"
+	"github.com/gomodule/redigo/redis"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
+	"io"
+	"os"
+	"sort"
+)
+
+var (
+	commit    = "unknown"
+	version   = "unknown"
+	buildDate = "unknown"
 )
 
 const (
@@ -22,49 +25,34 @@ const (
 	accesslogPath = logsDir + "/access.log"
 )
 
-const (
-	defaultEchoAddr  = ":8080"
-	defaultRedisAddr = "127.0.0.1:6379"
-)
-
-type echoValidator struct {
-	validator *validator.Validate
-}
-
-func (ev *echoValidator) Validate(i interface{}) error {
-	return ev.validator.Struct(i)
-}
-
-func initEcho(logOutput io.Writer) *echo.Echo {
-	e := echo.New()
-
-	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{Output: logOutput}))
-	e.Validator = &echoValidator{validator: validator.New()}
-
-	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
-
-	return e
-}
-
+// main starts program
 func main() {
-	var (
-		redisAddr = os.Getenv("TODO_REDIS_ADDR")
-		echoAddr  = os.Getenv("TODO_ECHO_ADDR")
-	)
-	if redisAddr == "" {
-		// redis on localhost w/ default port
-		redisAddr = defaultRedisAddr
-	}
-	if echoAddr == "" {
-		echoAddr = defaultEchoAddr
-	}
+	app := cli.NewApp()
+	app.Name = "aleksandr-ilin-go-demo-todo"
+	app.Usage = "Aleksandr Ilin golang demo TODO project"
+	app.Description = ""
+	app.Version = fmt.Sprintf("%s (commit: %s, build date: %s)", version, commit, buildDate)
+	app.Action = action
+
+	app.Flags = cliFlags
+	sort.Sort(cli.FlagsByName(app.Flags))
+
+	app.Run(os.Args)
+}
+
+func action(ctx *cli.Context) (err error) {
+	// parse cfg
+	cfg, err := newConfigurationFromContext(ctx)
+
+	redisAddr := fmt.Sprintf("%v:%v", cfg.Redis.Host, cfg.Redis.Port)
+	echoAddr := ":8080"
 
 	logrus.Info(redisAddr)
 	logrus.Info(echoAddr)
 
 	lrfd, err := os.OpenFile(logrusPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
 	if err != nil {
-		logrus.Fatal(err)
+		return cli.NewMultiError(err)
 	}
 	defer lrfd.Close()
 	logrus.SetOutput(lrfd)
@@ -79,7 +67,11 @@ func main() {
 		defer fd.Close()
 	}
 
-	redisConn, err := redis.Dial("tcp", redisAddr)
+	redisConn, err := redis.Dial(
+		"tcp",
+		redisAddr,
+		redis.DialDatabase(cfg.Redis.DB),
+	)
 	if err != nil {
 		logrus.Fatalf("redis; %v, %s", err, redisAddr)
 	}
@@ -92,4 +84,6 @@ func main() {
 	delivery.InitializeTodoHTTPHandler(e, todoService)
 
 	logrus.Error(e.Start(echoAddr))
+
+	return
 }
