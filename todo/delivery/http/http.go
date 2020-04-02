@@ -1,10 +1,9 @@
 package http
 
 import (
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
-
-	"github.com/sirupsen/logrus"
 
 	"github.com/labstack/echo"
 
@@ -29,12 +28,28 @@ func TodoFromDomainTodo(td *entities.Todo) *Todo {
 }
 
 type todoHandler struct {
+	logger *zap.Logger
+
 	TodoService service.TodoService
 }
 
+func newTodoHandler(
+	todoService service.TodoService,
+	logger *zap.Logger,
+) *todoHandler {
+	return &todoHandler{
+		logger:      logger,
+		TodoService: todoService,
+	}
+}
+
 // InitializeTodoHTTPHandler starts HTTP Handler for todo delivery
-func InitializeTodoHTTPHandler(e *echo.Echo, s service.TodoService) {
-	handler := &todoHandler{TodoService: s}
+func InitializeTodoHTTPHandler(
+	e *echo.Echo,
+	s service.TodoService,
+	logger *zap.Logger,
+) {
+	handler := newTodoHandler(s, logger)
 
 	e.GET("/todo", handler.GetAll)
 	e.POST("/todo", handler.Create)
@@ -50,11 +65,19 @@ func (h *todoHandler) GetAll(c echo.Context) error {
 	domainTodos, err := h.TodoService.GetAll(ctx)
 	switch err {
 	case service.ErrInternal:
-		logrus.Warn(err)
+		h.logger.Error(
+			"GetAll error",
+			zap.Error(err),
+		)
+
 		responseTodoStatusInternalServerErrorCounter.Inc()
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	case service.ErrTodoNotFound:
-		logrus.Info(err)
+		h.logger.Debug(
+			"GetAll not found",
+			zap.Error(err),
+		)
+
 		responseTodoStatusNotFoundCounter.Inc()
 		return c.JSON(http.StatusNotFound, err.Error())
 	}
@@ -74,11 +97,19 @@ func (h *todoHandler) Create(c echo.Context) error {
 
 	todoRequestItems := new(Todo)
 	if err := c.Bind(todoRequestItems); err != nil {
-		logrus.Info(err)
+		h.logger.Error(
+			"Create error",
+			zap.Error(err),
+		)
+
 		return err
 	}
 	if err := c.Validate(todoRequestItems); err != nil {
-		logrus.Info(err)
+		h.logger.Error(
+			"Create validation error",
+			zap.Error(err),
+		)
+
 		return err
 	}
 
@@ -86,11 +117,19 @@ func (h *todoHandler) Create(c echo.Context) error {
 
 	switch err := h.TodoService.Create(ctx, todoItem); err {
 	case service.ErrInternal:
-		logrus.Warn(err)
+		h.logger.Error(
+			"Create error",
+			zap.Error(err),
+		)
+
 		responseTodoStatusInternalServerErrorCounter.Inc()
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	case service.ErrTodoNotFound:
-		logrus.Info(err)
+		h.logger.Debug(
+			"Create not found",
+			zap.Error(err),
+		)
+
 		responseTodoStatusNotFoundCounter.Inc()
 		return c.JSON(http.StatusNotFound, err.Error())
 	}
@@ -104,18 +143,30 @@ func (h *todoHandler) GetByID(c echo.Context) error {
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		logrus.Info(err)
+		h.logger.Error(
+			"GetById error",
+			zap.Error(err),
+		)
+
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	todoDomain, err := h.TodoService.GetByID(ctx, uint(id))
 	switch err {
 	case service.ErrInternal:
-		logrus.Warn(err)
+		h.logger.Error(
+			"GetById error",
+			zap.Error(err),
+		)
+
 		responseTodoStatusInternalServerErrorCounter.Inc()
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	case service.ErrTodoNotFound:
-		logrus.Info(err)
+		h.logger.Debug(
+			"GetById not found error",
+			zap.Error(err),
+		)
+
 		responseTodoStatusNotFoundCounter.Inc()
 		return c.JSON(http.StatusNotFound, err.Error())
 	}
@@ -130,17 +181,29 @@ func (h *todoHandler) Delete(c echo.Context) error {
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		logrus.Info(err)
+		h.logger.Error(
+			"Delete error",
+			zap.Error(err),
+		)
+
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	switch err = h.TodoService.Delete(ctx, uint(id)); err {
 	case service.ErrInternal:
-		logrus.Warn(err)
+		h.logger.Error(
+			"Delete error",
+			zap.Error(err),
+		)
+
 		responseTodoStatusInternalServerErrorCounter.Inc()
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	case service.ErrTodoNotFound:
-		logrus.Info(err)
+		h.logger.Debug(
+			"Delete error",
+			zap.Error(err),
+		)
+
 		responseTodoStatusNotFoundCounter.Inc()
 		return c.JSON(http.StatusNotFound, err.Error())
 	}
@@ -153,29 +216,49 @@ func (h *todoHandler) Close(c echo.Context) error {
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		logrus.Info(err)
+		h.logger.Error(
+			"Close error",
+			zap.Error(err),
+		)
+
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	todoDomain, err := h.TodoService.GetByID(ctx, uint(id))
 	switch err {
 	case service.ErrInternal:
-		logrus.Warn(err)
+		h.logger.Error(
+			"Close error",
+			zap.Error(err),
+		)
+
 		responseTodoStatusInternalServerErrorCounter.Inc()
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	case service.ErrTodoNotFound:
-		logrus.Info(err)
+		h.logger.Debug(
+			"Close not found",
+			zap.Error(err),
+		)
+
 		responseTodoStatusNotFoundCounter.Inc()
 		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
 	switch err = h.TodoService.Close(ctx, todoDomain); err {
 	case service.ErrInternal:
-		logrus.Warn(err)
+		h.logger.Error(
+			"Close error",
+			zap.Error(err),
+		)
+
 		responseTodoStatusInternalServerErrorCounter.Inc()
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	case service.ErrTodoNotFound:
-		logrus.Info(err)
+		h.logger.Debug(
+			"Close not found error",
+			zap.Error(err),
+		)
+
 		responseTodoStatusNotFoundCounter.Inc()
 		return c.JSON(http.StatusNotFound, err.Error())
 	}

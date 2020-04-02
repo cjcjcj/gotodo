@@ -3,8 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
-
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/cjcjcj/todo/todo/entities"
 	"github.com/gomodule/redigo/redis"
@@ -39,21 +38,39 @@ func (tr *Todo) toEntityTodo() *entities.Todo {
 }
 
 type redisTodoRepository struct {
+	logger *zap.Logger
+
 	Conn redis.Conn
 }
 
 // NewRedisTodoRepository returns new redis todo repository instance
-func NewRedisTodoRepository(conn redis.Conn) TodoRepository {
-	return &redisTodoRepository{Conn: conn}
+func NewRedisTodoRepository(
+	conn redis.Conn,
+	logger *zap.Logger,
+) TodoRepository {
+	return &redisTodoRepository{
+		logger: logger,
+
+		Conn: conn,
+	}
 }
 
 func (r *redisTodoRepository) Create(ctx context.Context, te *entities.Todo) error {
-	logrus.Info("adding todo item w/")
+	r.logger.Debug(
+		"creating new TODO item",
+		zap.Any("item", te),
+	)
+
 	tr := newTodoFromEntityTodo(te)
 
 	newID, err := redis.Int(r.Conn.Do("INCR", redisIDfield))
 	if err != nil {
-		logrus.WithField("err", err).Warn("adding todo item w/")
+		r.logger.Error(
+			"TODO create item operation error",
+			zap.Any("item", te),
+			zap.Error(err),
+		)
+
 		return err
 	}
 
@@ -61,12 +78,22 @@ func (r *redisTodoRepository) Create(ctx context.Context, te *entities.Todo) err
 
 	trB, err := json.Marshal(tr)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{"id": tr.ID, "err": err}).Warn("adding todo item w/")
+		r.logger.Error(
+			"TODO create item operation error",
+			zap.Any("item", te),
+			zap.Error(err),
+		)
+
 		return err
 	}
 
 	if _, err = r.Conn.Do("HSET", redisTODOsField, tr.ID, string(trB)); err != nil {
-		logrus.WithFields(logrus.Fields{"id": tr.ID, "err": err}).Warn("adding todo item w/")
+		r.logger.Error(
+			"TODO create item operation error",
+			zap.Any("item", te),
+			zap.Error(err),
+		)
+
 		return err
 	}
 
@@ -76,17 +103,30 @@ func (r *redisTodoRepository) Create(ctx context.Context, te *entities.Todo) err
 }
 
 func (r *redisTodoRepository) Update(ctx context.Context, te *entities.Todo) error {
-	logrus.WithField("id", te.ID).Info("updating todo item w/")
+	r.logger.Debug(
+		"updating TODO item",
+		zap.Uint("id", te.ID),
+	)
 	tr := newTodoFromEntityTodo(te)
 
 	trB, err := json.Marshal(tr)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{"id": te.ID, "err": err}).Warn("updating todo item w/")
+		r.logger.Error(
+			"TODO item update operation error",
+			zap.Uint("id", tr.ID),
+			zap.Error(err),
+		)
+
 		return err
 	}
 
 	if _, err = r.Conn.Do("HSET", redisTODOsField, tr.ID, string(trB)); err != nil {
-		logrus.WithFields(logrus.Fields{"id": tr.ID, "err": err}).Warn("updating todo item w/")
+		r.logger.Error(
+			"TODO item update operation error",
+			zap.Uint("id", tr.ID),
+			zap.Error(err),
+		)
+
 		return err
 	}
 
@@ -96,9 +136,18 @@ func (r *redisTodoRepository) Update(ctx context.Context, te *entities.Todo) err
 }
 
 func (r *redisTodoRepository) Delete(ctx context.Context, id uint) error {
-	logrus.WithField("id", id).Info("removing todo item w/")
+	r.logger.Debug(
+		"deleting TODO item",
+		zap.Uint("id", id),
+	)
+
 	if _, err := r.Conn.Do("HDEL", redisTODOsField, id); err != nil {
-		logrus.WithFields(logrus.Fields{"id": id, "err": err}).Warn("on removing todo item error occurred")
+		r.logger.Error(
+			"TODO item delete operation error",
+			zap.Uint("id", id),
+			zap.Error(err),
+		)
+
 		return err
 	}
 
@@ -106,20 +155,32 @@ func (r *redisTodoRepository) Delete(ctx context.Context, id uint) error {
 }
 
 func (r *redisTodoRepository) GetByID(ctx context.Context, id uint) (*entities.Todo, error) {
-	logrus.WithField("id", id).Info("getting todo item w/")
+	r.logger.Debug(
+		"receiving TODO item",
+		zap.Uint("id", id),
+	)
 
 	vb, err := redis.Bytes(r.Conn.Do("HGET", redisTODOsField, id))
 	switch err {
 	case nil:
 		// OK
-		logrus.WithField("id", id).Info("getted todo item w/")
+		r.logger.Debug(
+			"TODO item successfully received",
+			zap.Uint("id", id),
+		)
+
 		break
 	case redis.ErrNil:
 		// if value not present
 		return nil, nil
 	default:
 		// any other error
-		logrus.WithFields(logrus.Fields{"id": id, "err": err}).Warn("getting todo item w/")
+		r.logger.Error(
+			"getting TODO item error",
+			zap.Uint("id", id),
+			zap.Error(err),
+		)
+
 		return nil, err
 	}
 
@@ -133,10 +194,17 @@ func (r *redisTodoRepository) GetByID(ctx context.Context, id uint) (*entities.T
 }
 
 func (r *redisTodoRepository) GetAll(ctx context.Context) ([]*entities.Todo, error) {
-	logrus.Info("getting all todo items")
+	r.logger.Debug(
+		"getting all TODO items",
+	)
+
 	v, err := redis.ByteSlices(r.Conn.Do("HVALS", redisTODOsField))
 	if err != nil {
-		logrus.WithField("err", err).Warn("getting all todo items w/")
+		r.logger.Error(
+			"receiving all todo items error",
+			zap.Error(err),
+		)
+
 		return nil, err
 	}
 
@@ -146,7 +214,11 @@ func (r *redisTodoRepository) GetAll(ctx context.Context) ([]*entities.Todo, err
 	for _, trB := range v {
 		err = json.Unmarshal(trB, tr)
 		if err != nil {
-			logrus.WithField("err", err).Info("getting all todo items w/")
+			r.logger.Error(
+				"receiving all todo items error",
+				zap.Error(err),
+			)
+
 			return nil, err
 		}
 		todos = append(todos, tr.toEntityTodo())

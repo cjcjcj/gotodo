@@ -6,9 +6,8 @@ import (
 	"github.com/cjcjcj/todo/todo/repository"
 	"github.com/cjcjcj/todo/todo/service"
 	"github.com/gomodule/redigo/redis"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"io"
+	"go.uber.org/zap"
 	"os"
 	"sort"
 )
@@ -17,12 +16,6 @@ var (
 	commit    = "unknown"
 	version   = "unknown"
 	buildDate = "unknown"
-)
-
-const (
-	logsDir       = "/var/log/todo"
-	logrusPath    = logsDir + "/logs.log"
-	accesslogPath = logsDir + "/access.log"
 )
 
 // main starts program
@@ -47,25 +40,17 @@ func action(ctx *cli.Context) (err error) {
 	redisAddr := fmt.Sprintf("%v:%v", cfg.Redis.Host, cfg.Redis.Port)
 	echoAddr := ":8080"
 
-	logrus.Info(redisAddr)
-	logrus.Info(echoAddr)
+	logger := zap.NewExample()
+	defer logger.Sync()
 
-	lrfd, err := os.OpenFile(logrusPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
-	if err != nil {
-		return cli.NewMultiError(err)
-	}
-	defer lrfd.Close()
-	logrus.SetOutput(lrfd)
-
-	var echoLogFd io.Writer
-	fd, err := os.Create(accesslogPath)
-	if err != nil {
-		logrus.Warn(err)
-		echoLogFd = os.Stdout
-	} else {
-		echoLogFd = fd
-		defer fd.Close()
-	}
+	logger.Debug(
+		"redis configs: ",
+		zap.Any("cfg", cfg.Redis),
+	)
+	logger.Debug(
+		"echo address: ",
+		zap.Any("address", echoAddr),
+	)
 
 	redisConn, err := redis.Dial(
 		"tcp",
@@ -73,17 +58,19 @@ func action(ctx *cli.Context) (err error) {
 		redis.DialDatabase(cfg.Redis.DB),
 	)
 	if err != nil {
-		logrus.Fatalf("redis; %v, %s", err, redisAddr)
+		logger.Error(
+			"redis initialization failed",
+			zap.Error(err),
+		)
+		return cli.NewMultiError(err)
 	}
 	defer redisConn.Close()
 
-	e := initEcho(echoLogFd)
+	e := initEcho()
 
-	todoRepo := repository.NewRedisTodoRepository(redisConn)
+	todoRepo := repository.NewRedisTodoRepository(redisConn, logger)
 	todoService := service.NewTodoService(todoRepo)
-	delivery.InitializeTodoHTTPHandler(e, todoService)
-
-	logrus.Error(e.Start(echoAddr))
+	delivery.InitializeTodoHTTPHandler(e, todoService, logger)
 
 	return
 }
