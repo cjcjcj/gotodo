@@ -6,7 +6,6 @@ import (
 	repository "github.com/cjcjcj/todo/todo/repository/redis"
 	"github.com/cjcjcj/todo/todo/service/todo"
 	"github.com/labstack/echo"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 	"os"
@@ -63,19 +62,11 @@ func action(ctx *cli.Context) (err error) {
 		zap.Any("address", echoAddr),
 	)
 
-	e := initEcho()
+	e := echo.New()
 
 	todoRepo := repository.NewRedisTodoRepository(redisClient, logger)
 	todoService := todo.NewTodoService(todoRepo)
 	delivery.InitializeTodoHandler(e, todoService, logger)
 
 	return
-}
-
-func initEcho() *echo.Echo {
-	e := echo.New()
-
-	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
-
-	return e
 }

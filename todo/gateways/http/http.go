@@ -3,6 +3,7 @@ package http
 import (
 	"github.com/cjcjcj/todo/todo/service"
 	"github.com/labstack/echo"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
@@ -35,4 +36,6 @@ func InitializeTodoHandler(
 	e.GET("/todo/:id", handler.GetByID)
 	e.DELETE("/todo/:id", handler.Delete)
 	e.PUT("/todo/:id", handler.Close)
+
+	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 }
