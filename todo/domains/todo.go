@@ -1,9 +1,5 @@
 package domains
 
-import (
-	"github.com/cjcjcj/todo/todo/repository/entities"
-)
-
 // Todo defines todo model
 type Todo struct {
 	ID     string
@@ -11,12 +7,12 @@ type Todo struct {
 	Closed bool
 }
 
-func (t *Todo) ToRepoTodo() *entities.Todo {
-	return &entities.Todo{
-		ID:     t.ID,
-		Title:  t.Title,
-		Closed: t.Closed,
-	}
+func (t *Todo) Close() {
+	t.Closed = true
+}
+
+func (t *Todo) Open() {
+	t.Closed = false
 }
 
 func NewTodo(ID string, title string, closed bool) *Todo {
@@ -24,18 +20,5 @@ func NewTodo(ID string, title string, closed bool) *Todo {
 		ID:     ID,
 		Title:  title,
 		Closed: closed,
-	}
-}
-
-// NewTodoFromString returns new Todo instance
-func NewTodoFromString(title string) *Todo {
-	return NewTodo("", title, false)
-}
-
-func NewTodoFromRepoTodo(todo *entities.Todo) *Todo {
-	return &Todo{
-		ID:     todo.ID,
-		Title:  todo.Title,
-		Closed: todo.Closed,
 	}
 }

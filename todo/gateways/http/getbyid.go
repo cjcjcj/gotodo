@@ -2,7 +2,7 @@ package http
 
 import (
 	"github.com/cjcjcj/todo/todo/gateways/entities"
-	"github.com/cjcjcj/todo/todo/service"
+	serviceErrors "github.com/cjcjcj/todo/todo/service/errors"
 	"github.com/labstack/echo"
 	"go.uber.org/zap"
 	"net/http"
@@ -14,9 +14,9 @@ func (h *todoHandler) GetByID(c echo.Context) error {
 
 	id := c.Param("id")
 
-	todoDomain, err := h.TodoService.GetByID(ctx, id)
+	todoDomain, err := h.todoService.GetByID(ctx, id)
 	switch err {
-	case service.ErrInternal:
+	case serviceErrors.ErrInternal:
 		h.logger.Error(
 			"GetById error",
 			zap.Error(err),
@@ -24,7 +24,7 @@ func (h *todoHandler) GetByID(c echo.Context) error {
 
 		responseTodoStatusInternalServerErrorCounter.Inc()
 		return c.JSON(http.StatusInternalServerError, err.Error())
-	case service.ErrTodoNotFound:
+	case serviceErrors.ErrTodoNotFound:
 		h.logger.Debug(
 			"GetById not found error",
 			zap.Error(err),
@@ -35,5 +35,5 @@ func (h *todoHandler) GetByID(c echo.Context) error {
 	}
 
 	responseTodoStatusOKCounter.Inc()
-	return c.JSON(http.StatusOK, entities.TodoFromDomainTodo(todoDomain))
+	return c.JSON(http.StatusOK, entities.NewTodoFromDomainTodo(todoDomain))
 }

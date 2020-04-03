@@ -1,7 +1,7 @@
 package http
 
 import (
-	"github.com/cjcjcj/todo/todo/service"
+	serviceErrors "github.com/cjcjcj/todo/todo/service/errors"
 	"github.com/labstack/echo"
 	"go.uber.org/zap"
 	"net/http"
@@ -13,8 +13,8 @@ func (h *todoHandler) Delete(c echo.Context) error {
 
 	id := c.Param("id")
 
-	switch err := h.TodoService.Delete(ctx, id); err {
-	case service.ErrInternal:
+	switch err := h.todoService.Delete(ctx, id); err {
+	case serviceErrors.ErrInternal:
 		h.logger.Error(
 			"Delete error",
 			zap.Error(err),
@@ -22,7 +22,7 @@ func (h *todoHandler) Delete(c echo.Context) error {
 
 		responseTodoStatusInternalServerErrorCounter.Inc()
 		return c.JSON(http.StatusInternalServerError, err.Error())
-	case service.ErrTodoNotFound:
+	case serviceErrors.ErrTodoNotFound:
 		h.logger.Debug(
 			"Delete error",
 			zap.Error(err),

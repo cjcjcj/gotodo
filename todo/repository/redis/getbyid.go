@@ -2,17 +2,17 @@ package redis
 
 import (
 	"context"
-	"github.com/cjcjcj/todo/todo/repository/entities"
+	"github.com/cjcjcj/todo/todo/domains"
 	"github.com/cjcjcj/todo/todo/repository/errors"
 	"go.uber.org/zap"
 
 	goredis "github.com/go-redis/redis/v7"
 )
 
-func (r *TodoRepository) GetByID(
+func (r *todoRepository) GetByID(
 	ctx context.Context,
 	ID string,
-) (*entities.Todo, error) {
+) (*domains.Todo, error) {
 	r.logger.Debug(
 		"receiving TODO item",
 		zap.String("id", ID),
@@ -21,7 +21,7 @@ func (r *TodoRepository) GetByID(
 	var (
 		key = r.getKey(redisTODOField, ID)
 
-		result = &entities.Todo{}
+		result = &domains.Todo{}
 	)
 
 	switch err := r.client.Get(key).Scan(result); err {

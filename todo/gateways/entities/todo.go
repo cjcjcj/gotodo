@@ -9,12 +9,15 @@ type Todo struct {
 	Closed bool   `json:"closed"`
 }
 
-// TodoFromDomainTodo is a copy constructor for Todo
-func TodoFromDomainTodo(td *domains.Todo) *Todo {
+func (t *Todo) ToDomainTodo() *domains.Todo {
+	return domains.NewTodo(t.ID, t.Title, t.Closed)
+}
+
+// NewTodoFromDomainTodo is a copy constructor for Todo
+func NewTodoFromDomainTodo(td *domains.Todo) *Todo {
 	return &Todo{
 		ID:     td.ID,
 		Title:  td.Title,
 		Closed: td.Closed,
 	}
 }
-

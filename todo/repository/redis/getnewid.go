@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func (r *TodoRepository) getNewID(ctx context.Context) (string, error) {
+func (r *todoRepository) getNewID(ctx context.Context) (string, error) {
 	var (
 		key = r.getKey(redisIDCounterField)
 	)

@@ -9,7 +9,7 @@ import (
 type todoHandler struct {
 	logger *zap.Logger
 
-	TodoService service.TodoService
+	todoService service.TodoService
 }
 
 func newTodoHandler(
@@ -17,8 +17,9 @@ func newTodoHandler(
 	logger *zap.Logger,
 ) *todoHandler {
 	return &todoHandler{
-		logger:      logger,
-		TodoService: todoService,
+		logger: logger,
+
+		todoService: todoService,
 	}
 }
 

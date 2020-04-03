@@ -6,20 +6,20 @@ import (
 	goredis "github.com/go-redis/redis/v7"
 )
 
-// NewRedisTodoRepository returns new redis TodoRepository instance
+type todoRepository struct {
+	logger *zap.Logger
+
+	client *goredis.Client
+}
+
+// NewRedisTodoRepository returns new redis todoRepository instance
 func NewRedisTodoRepository(
 	client *goredis.Client,
 	logger *zap.Logger,
-) *TodoRepository {
-	return &TodoRepository{
+) *todoRepository {
+	return &todoRepository{
 		logger: logger,
 
 		client: client,
 	}
-}
-
-type TodoRepository struct {
-	logger *zap.Logger
-
-	client *goredis.Client
 }

@@ -1,4 +1,4 @@
-package service
+package todo
 
 import (
 	"context"
@@ -7,13 +7,15 @@ import (
 	"github.com/cjcjcj/todo/todo/service/errors"
 )
 
-func (s *todoService) GetByID(ctx context.Context, ID string) (*domains.Todo, error) {
-	repoTodo, err := s.TodoRepo.GetByID(ctx, ID)
+func (s *todoService) GetByID(
+	ctx context.Context,
+	ID string,
+) (*domains.Todo, error) {
+	todo, err := s.TodoRepo.GetByID(ctx, ID)
 
 	switch err.(type) {
 	case nil:
-		domainTodo := domains.NewTodoFromRepoTodo(repoTodo)
-		return domainTodo, nil
+		return todo, nil
 	case *repoErrors.NotFoundError:
 		return nil, errors.ErrTodoNotFound
 	default:

@@ -2,14 +2,14 @@ package redis
 
 import (
 	"context"
-	"github.com/cjcjcj/todo/todo/repository/entities"
+	"github.com/cjcjcj/todo/todo/domains"
 	"go.uber.org/zap"
 )
 
-func (r *TodoRepository) Update(
+func (r *todoRepository) Update(
 	ctx context.Context,
-	todo *entities.Todo,
-) (*entities.Todo, error) {
+	todo *domains.Todo,
+) error {
 	r.logger.Debug(
 		"updating TODO item",
 		zap.String("id", todo.ID),
@@ -17,21 +17,19 @@ func (r *TodoRepository) Update(
 
 	var (
 		key = r.getKey(redisTODOField, todo.ID)
-
-		toupdate = entities.NewTodoFromTodo(todo)
 	)
 
-	cmd := r.client.Set(key, toupdate, 0)
+	cmd := r.client.Set(key, todo, 0)
 	if _, err := cmd.Result(); err != nil {
 		r.logger.Error(
 			"TODO item update operation error",
 			zap.Any("source_item", todo),
-			zap.Any("to_update_item", toupdate),
+			zap.Any("to_update_item", todo),
 			zap.Error(err),
 		)
 
-		return nil, err
+		return err
 	}
 
-	return toupdate, nil
+	return nil
 }

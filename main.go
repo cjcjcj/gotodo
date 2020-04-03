@@ -4,7 +4,7 @@ import (
 	"fmt"
 	delivery "github.com/cjcjcj/todo/todo/gateways/http"
 	repository "github.com/cjcjcj/todo/todo/repository/redis"
-	"github.com/cjcjcj/todo/todo/service"
+	"github.com/cjcjcj/todo/todo/service/todo"
 	"github.com/labstack/echo"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli"
@@ -66,7 +66,7 @@ func action(ctx *cli.Context) (err error) {
 	e := initEcho()
 
 	todoRepo := repository.NewRedisTodoRepository(redisClient, logger)
-	todoService := service.NewTodoService(todoRepo)
+	todoService := todo.NewTodoService(todoRepo)
 	delivery.InitializeTodoHandler(e, todoService, logger)
 
 	return

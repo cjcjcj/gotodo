@@ -1,9 +1,8 @@
 package http
 
 import (
-	"github.com/cjcjcj/todo/todo/domains"
 	"github.com/cjcjcj/todo/todo/gateways/entities"
-	"github.com/cjcjcj/todo/todo/service"
+	serviceErrors "github.com/cjcjcj/todo/todo/service/errors"
 	"github.com/labstack/echo"
 	"go.uber.org/zap"
 	"net/http"
@@ -13,7 +12,7 @@ import (
 func (h *todoHandler) Create(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	todoRequestItems := new(entities.Todo)
+	todoRequestItems := &entities.Todo{}
 	if err := c.Bind(todoRequestItems); err != nil {
 		h.logger.Error(
 			"Create error",
@@ -31,10 +30,10 @@ func (h *todoHandler) Create(c echo.Context) error {
 		return err
 	}
 
-	todoItem := domains.NewTodoFromString(todoRequestItems.Title)
-
-	switch err := h.TodoService.Create(ctx, todoItem); err {
-	case service.ErrInternal:
+	todoItem := todoRequestItems.ToDomainTodo()
+	todoCreated, err := h.todoService.Create(ctx, todoItem)
+	switch err {
+	case serviceErrors.ErrInternal:
 		h.logger.Error(
 			"Create error",
 			zap.Error(err),
@@ -42,7 +41,7 @@ func (h *todoHandler) Create(c echo.Context) error {
 
 		responseTodoStatusInternalServerErrorCounter.Inc()
 		return c.JSON(http.StatusInternalServerError, err.Error())
-	case service.ErrTodoNotFound:
+	case serviceErrors.ErrTodoNotFound:
 		h.logger.Debug(
 			"Create not found",
 			zap.Error(err),
@@ -52,5 +51,5 @@ func (h *todoHandler) Create(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, err.Error())
 	}
 
-	return c.JSON(http.StatusCreated, entities.TodoFromDomainTodo(todoItem))
+	return c.JSON(http.StatusCreated, entities.NewTodoFromDomainTodo(todoCreated))
 }

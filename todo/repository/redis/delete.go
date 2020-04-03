@@ -5,7 +5,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (r *TodoRepository) Delete(ctx context.Context, ID string) error {
+func (r *todoRepository) Delete(ctx context.Context, ID string) error {
 	r.logger.Debug(
 		"deleting TODO item",
 		zap.String("id", ID),

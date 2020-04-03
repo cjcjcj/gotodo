@@ -1,8 +1,6 @@
-package service
+package todo
 
-import (
-	"github.com/cjcjcj/todo/todo/repository"
-)
+import "github.com/cjcjcj/todo/todo/repository"
 
 type todoService struct {
 	TodoRepo repository.TodoRepository
@@ -10,5 +8,7 @@ type todoService struct {
 
 // NewTodoService is a constructor for todo service
 func NewTodoService(todoRepo repository.TodoRepository) *todoService {
-	return &todoService{TodoRepo: todoRepo}
+	return &todoService{
+		TodoRepo: todoRepo,
+	}
 }
