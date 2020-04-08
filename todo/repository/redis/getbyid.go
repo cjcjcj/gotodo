@@ -44,7 +44,7 @@ func (r *todoRepository) GetByID(
 			zap.Error(err),
 		)
 
-		return nil, err
+		return nil, errors.InternalError
 	}
 
 	return result, nil

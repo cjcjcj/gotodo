@@ -1,117 +1,43 @@
 package todo
 
 import (
-	"context"
+	mock_repository "github.com/cjcjcj/todo/mocks/github.com/cjcjcj/todo/todo/repository"
+	"github.com/cjcjcj/todo/todo/repository"
+	"github.com/golang/mock/gomock"
+	"reflect"
 	"testing"
-
-	"github.com/cjcjcj/todo/mocks"
-	"github.com/cjcjcj/todo/todo/domains"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-func TestTodoCreate(t *testing.T) {
-	const (
-		id     = uint(0)
-		title  = "test"
-		closed = false
-	)
-
-	mockRepo := &mocks.TodoRepository{}
-
-	te := domains.NewTodoFromString(title)
-	expectedTe := domains.Todo{
-		ID:     id,
-		Title:  title,
-		Closed: closed,
+func TestNewTodoService(t *testing.T) {
+	type args struct {
+		todoRepo repository.TodoRepository
 	}
 
-	t.Run("OK", func(t *testing.T) {
-		mockRepo.On("Create", mock.Anything, te).Once().Return(nil)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-		s := NewTodoService(mockRepo)
+	mockRepo := mock_repository.NewMockTodoRepository(ctrl)
 
-		err := s.Create(context.TODO(), te)
-
-		assert.NoError(t, err)
-		mockRepo.AssertExpectations(t)
-
-		assert.Equal(t, *te, expectedTe, "should be equal")
-	})
-}
-
-func TestTodoClose(t *testing.T) {
-	const (
-		id    = uint(1)
-		title = "test"
-	)
-
-	mockRepo := &mocks.TodoRepository{}
-	te := &domains.Todo{
-		ID:     id,
-		Title:  title,
-		Closed: false,
+	tests := []struct {
+		name string
+		args args
+		want *todoService
+	}{
+		{
+			name: "OK",
+			args: args{
+				todoRepo: mockRepo,
+			},
+			want: &todoService{
+				repo: mockRepo,
+			},
+		},
 	}
-	expectedTe := domains.Todo{
-		ID:     id,
-		Title:  title,
-		Closed: true,
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewTodoService(tt.args.todoRepo); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewTodoService() = %v, want %v", got, tt.want)
+			}
+		})
 	}
-
-	t.Run("OK", func(t *testing.T) {
-		mockRepo.On("Update", mock.Anything, te).Once().Return(nil)
-
-		s := NewTodoService(mockRepo)
-
-		err := s.Close(context.TODO(), te)
-
-		assert.NoError(t, err)
-		mockRepo.AssertExpectations(t)
-		assert.Equal(t, *te, expectedTe, "should be equal")
-	})
-}
-
-func TestTodoDelete(t *testing.T) {
-	const id = uint(0)
-
-	mockRepo := &mocks.TodoRepository{}
-
-	t.Run("OK", func(t *testing.T) {
-		mockRepo.On("Delete", mock.Anything, id).Once().Return(nil)
-
-		s := NewTodoService(mockRepo)
-
-		err := s.Delete(context.TODO(), id)
-
-		assert.NoError(t, err)
-		mockRepo.AssertExpectations(t)
-	})
-}
-
-func TestTodoGetById(t *testing.T) {
-	const (
-		id     = uint(1)
-		title  = "test"
-		closed = false
-	)
-
-	mockRepo := &mocks.TodoRepository{}
-
-	expectedTe := domains.Todo{
-		ID:     id,
-		Title:  title,
-		Closed: closed,
-	}
-
-	t.Run("OK", func(t *testing.T) {
-		mockRepo.On("GetByID", mock.Anything, id).Once().Return(&expectedTe, nil)
-
-		s := NewTodoService(mockRepo)
-
-		te, err := s.GetByID(context.TODO(), id)
-
-		assert.NoError(t, err)
-		mockRepo.AssertExpectations(t)
-		assert.Equal(t, *te, expectedTe, "should be equal")
-	})
 }

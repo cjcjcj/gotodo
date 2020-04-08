@@ -10,7 +10,7 @@ func (s *todoService) Create(
 	ctx context.Context,
 	item *domains.Todo,
 ) (*domains.Todo, error) {
-	todo, err := s.TodoRepo.Create(ctx, item)
+	todo, err := s.repo.Create(ctx, item)
 	if err != nil {
 		return nil, errors.ErrInternal
 	}

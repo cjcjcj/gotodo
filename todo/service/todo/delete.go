@@ -6,7 +6,7 @@ import (
 )
 
 func (s *todoService) Delete(ctx context.Context, ID string) error {
-	err := s.TodoRepo.Delete(ctx, ID)
+	err := s.repo.Delete(ctx, ID)
 
 	if err != nil {
 		return errors.ErrInternal

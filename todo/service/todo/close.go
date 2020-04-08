@@ -16,7 +16,7 @@ func (s *todoService) Close(
 	}
 	item.Close()
 
-	if err := s.TodoRepo.Update(ctx, item); err != nil {
+	if err := s.repo.Update(ctx, item); err != nil {
 		return nil, errors.ErrInternal
 	}
 	return item, nil

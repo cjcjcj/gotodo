@@ -11,7 +11,7 @@ func (s *todoService) GetByID(
 	ctx context.Context,
 	ID string,
 ) (*domains.Todo, error) {
-	todo, err := s.TodoRepo.GetByID(ctx, ID)
+	todo, err := s.repo.GetByID(ctx, ID)
 
 	switch err.(type) {
 	case nil:

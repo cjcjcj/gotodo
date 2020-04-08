@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/go-redis/redis/v7 v7.2.0
+	github.com/golang/mock v1.4.3
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/labstack/gommon v0.2.8 // indirect

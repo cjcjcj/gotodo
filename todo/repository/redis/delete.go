@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"github.com/cjcjcj/todo/todo/repository/errors"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +24,7 @@ func (r *todoRepository) Delete(ctx context.Context, ID string) error {
 			zap.Error(err),
 		)
 
-		return err
+		return errors.InternalError
 	}
 
 	return nil

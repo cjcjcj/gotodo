@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"github.com/cjcjcj/todo/todo/repository/errors"
 	"go.uber.org/zap"
 	"strconv"
 )
@@ -18,7 +19,7 @@ func (r *todoRepository) getNewID(ctx context.Context) (string, error) {
 			"ID increment failed",
 			zap.Error(err),
 		)
-		return "", err
+		return "", errors.InternalError
 	}
 
 	return strconv.Itoa(int(id)), nil

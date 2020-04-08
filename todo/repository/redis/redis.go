@@ -9,12 +9,12 @@ import (
 type todoRepository struct {
 	logger *zap.Logger
 
-	client *goredis.Client
+	client goredis.UniversalClient
 }
 
 // NewRedisTodoRepository returns new redis todoRepository instance
 func NewRedisTodoRepository(
-	client *goredis.Client,
+	client goredis.UniversalClient,
 	logger *zap.Logger,
 ) *todoRepository {
 	return &todoRepository{

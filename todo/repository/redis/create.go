@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"github.com/cjcjcj/todo/todo/domains"
+	"github.com/cjcjcj/todo/todo/repository/errors"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +24,7 @@ func (r *todoRepository) Create(
 			zap.Error(err),
 		)
 
-		return nil, err
+		return nil, errors.InternalError
 	}
 
 	var (
@@ -40,7 +41,7 @@ func (r *todoRepository) Create(
 			zap.Error(err),
 		)
 
-		return nil, err
+		return nil, errors.InternalError
 	}
 
 	return todo, nil
